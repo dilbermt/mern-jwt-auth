@@ -1,4 +1,10 @@
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../constants/env";
+import VerificationCodeTypes from "../constants/verificationCodeTypes";
+import sessionModel from "../models/session.model";
 import UserModel from "../models/user.model";
+import verificationCodeModel from "../models/verificationCode.model";
+import { oneYearFromNow } from "../utils/date";
+import jwt from "jsonwebtoken";
 
 export type CreateAccountParams = {
   email: string;
@@ -18,8 +24,44 @@ export const createAccount = async (data: CreateAccountParams) => {
     password: data.password,
   });
   // create verification code
+  const verificationCode = await verificationCodeModel.create({
+    userId: user._id,
+    type: VerificationCodeTypes.EmailVerification,
+    expiresAt: oneYearFromNow(),
+  });
   // send verification email
   // create session
+  const session = await sessionModel.create({
+    userId: user._id,
+    userAgent: data.userAgent,
+  });
   // sign access and refresh tokens
+
+  const refreshToken = jwt.sign(
+    {
+      sessionId: session._id,
+    },
+    JWT_REFRESH_SECRET,
+    {
+      audience: ["user"],
+      expiresIn: "30d",
+    }
+  );
+  const accessToken = jwt.sign(
+    {
+      userId: user._id,
+      sessionId: session._id,
+    },
+    JWT_SECRET,
+    {
+      audience: ["user"],
+      expiresIn: "30d",
+    }
+  );
   // return user and tokens
+  return {
+    user,
+    accessToken,
+    refreshToken,
+  };
 };

@@ -1,4 +1,4 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 import { compareHashedValue, hashValue } from "../utils/bcrypt";
 
 export interface UserDocument extends mongoose.Document {
