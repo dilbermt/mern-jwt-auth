@@ -4,20 +4,22 @@ import { fifteenMinutesFromNow, thirtyDaysFromNow } from "./date";
 
 const secure = NODE_ENV !== "development";
 
+export const REFRESH_PATH = "/auth/refresh";
+
 const defaults: CookieOptions = {
   sameSite: true,
   httpOnly: true,
   secure,
 };
 
-const getAccessTokenCookieOptions = (): CookieOptions => ({
+export const getAccessTokenCookieOptions = (): CookieOptions => ({
   ...defaults,
   expires: fifteenMinutesFromNow(),
 });
-const getRefreshTokenCookieOptions = (): CookieOptions => ({
+export const getRefreshTokenCookieOptions = (): CookieOptions => ({
   ...defaults,
   expires: thirtyDaysFromNow(),
-  path: "/auth/refresh",
+  path: REFRESH_PATH,
 });
 
 type Params = {
@@ -30,4 +32,11 @@ export const setAuthCookies = ({ res, accessToken, refreshToken }: Params) => {
   return res
     .cookie("accessToken", accessToken, getAccessTokenCookieOptions())
     .cookie("refreshToken", refreshToken, getRefreshTokenCookieOptions());
+};
+
+export const clearAuthCookies = (res: Response) => {
+  res.clearCookie("accessToken").clearCookie("refreshToken", {
+    path: REFRESH_PATH,
+  });
+  return res;
 };
