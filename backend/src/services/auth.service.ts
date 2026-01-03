@@ -1,5 +1,5 @@
 import { JWT_REFRESH_SECRET, JWT_SECRET } from "../constants/env";
-import { CONFLICT } from "../constants/http";
+import { CONFLICT, NOT_FOUND, UNAUTHORIZED } from "../constants/http";
 import VerificationCodeTypes from "../constants/verificationCodeTypes";
 import sessionModel from "../models/session.model";
 import UserModel from "../models/user.model";
@@ -7,6 +7,7 @@ import verificationCodeModel from "../models/verificationCode.model";
 import appAssert from "../utils/appAssert";
 import { oneYearFromNow } from "../utils/date";
 import jwt from "jsonwebtoken";
+import { refreshTokenSignOptions, signToken } from "../utils/jwt";
 
 export type CreateAccountParams = {
   email: string;
@@ -42,27 +43,62 @@ export const createAccount = async (data: CreateAccountParams) => {
   });
   // sign access and refresh tokens
 
-  const refreshToken = jwt.sign(
+  const refreshToken = signToken(
     {
       sessionId: session._id,
     },
-    JWT_REFRESH_SECRET,
-    {
-      audience: ["user"],
-      expiresIn: "30d",
-    }
+    refreshTokenSignOptions
   );
-  const accessToken = jwt.sign(
-    {
-      userId: user._id,
-      sessionId: session._id,
-    },
-    JWT_SECRET,
-    {
-      audience: ["user"],
-      expiresIn: "30d",
-    }
-  );
+  const accessToken = signToken({
+    userId: user._id,
+    sessionId: session._id,
+  });
+
+  // return user and tokens
+  return {
+    user: user.omitPassword(),
+    accessToken,
+    refreshToken,
+  };
+};
+
+export type LoginParams = {
+  email: string;
+  password: string;
+  userAgent?: string;
+};
+
+export const loginUser = async ({
+  email,
+  password,
+  userAgent,
+}: LoginParams) => {
+  // get the user by email
+  const user = await UserModel.findOne({ email });
+
+  appAssert(user, UNAUTHORIZED, "Invalid email or password");
+
+  // validate password from the request
+  const isValid = await user.comparePassword(password);
+  appAssert(isValid, UNAUTHORIZED, "Invalid email or password");
+
+  // create a session
+  const session = await sessionModel.create({
+    userId: user._id,
+    userAgent: userAgent,
+  });
+
+  const sessionInfo = {
+    sessionId: session._id,
+  };
+
+  // sign access token and refresh token
+  const refreshToken = signToken(sessionInfo, refreshTokenSignOptions);
+  const accessToken = signToken({
+    ...sessionInfo,
+    userId: user._id,
+  });
+
   // return user and tokens
   return {
     user: user.omitPassword(),
