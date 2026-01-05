@@ -9,6 +9,7 @@ import { OK } from "./constants/http";
 import authRoutes from "./routes/auth.route";
 import authenticate from "./middlewares/authenticate";
 import userRoutes from "./routes/user.route";
+import sessionRoutes from "./routes/session.routes";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/auth", authRoutes);
 
 // protected routes
 app.use("/user", authenticate, userRoutes);
+app.use("/sessions", authenticate, sessionRoutes);
 
 app.use(errorHandler);
 
