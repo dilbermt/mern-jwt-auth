@@ -4,6 +4,7 @@ import {
   logoutHandler,
   refreshHandler,
   registerHandler,
+  verifyEmailHandler,
 } from "../controllers/auth.controller";
 
 // prefix: /auth
@@ -14,5 +15,6 @@ router.post("/register", registerHandler);
 router.post("/login", loginHandler);
 router.get("/refresh", refreshHandler);
 router.get("/logout", logoutHandler);
+router.get("/email/verify/:code", verifyEmailHandler);
 
 export default router;
